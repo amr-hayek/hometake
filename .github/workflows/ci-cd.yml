@@ -131,7 +131,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters "commands=$COMMANDS_JSON" \
             --instance-ids $INSTANCE_IDS \
-            --comment "Deploy $ECR_REPOSITORY:${{ env.IMAGE_TAG }}" \
+            --comment "Deploy takehome-web:${{ env.IMAGE_TAG }}" \
             --output table
           
           echo "Deployment command sent successfully"
