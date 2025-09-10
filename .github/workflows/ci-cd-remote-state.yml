@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline (with Remote State)
 
 on:
   push:
@@ -56,19 +56,33 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get Terraform outputs
+      - name: Get Terraform outputs (Remote State)
         id: tf
         run: |
-          # Using hardcoded values from terraform output
-          ECR_REPO_URL="362268418894.dkr.ecr.us-east-1.amazonaws.com/takehome-web"
-          ASG_TAG_KEY="Project"
-          ASG_TAG_VALUE="takehome"
+          cd infra
+          
+          # Initialize Terraform with remote state
+          terraform init
+          
+          # Get outputs from remote state
+          ECR_REPO_URL=$(terraform output -raw ecr_repo_url)
+          ASG_TAG_KEY=$(terraform output -raw asg_tag_key)
+          ASG_TAG_VALUE=$(terraform output -raw asg_tag_value)
+          
+          # Verify outputs are not empty
+          if [ -z "$ECR_REPO_URL" ] || [ -z "$ASG_TAG_KEY" ] || [ -z "$ASG_TAG_VALUE" ]; then
+            echo "Error: Terraform outputs are empty"
+            echo "ECR_REPO_URL: $ECR_REPO_URL"
+            echo "ASG_TAG_KEY: $ASG_TAG_KEY"
+            echo "ASG_TAG_VALUE: $ASG_TAG_VALUE"
+            exit 1
+          fi
           
           echo "ecr_repo_url=$ECR_REPO_URL" >> $GITHUB_OUTPUT
           echo "asg_tag_key=$ASG_TAG_KEY" >> $GITHUB_OUTPUT
           echo "asg_tag_value=$ASG_TAG_VALUE" >> $GITHUB_OUTPUT
           
-          echo "Using Terraform outputs:"
+          echo "Terraform outputs retrieved successfully:"
           echo "ECR Repository: $ECR_REPO_URL"
           echo "ASG Tag Key: $ASG_TAG_KEY"
           echo "ASG Tag Value: $ASG_TAG_VALUE"
