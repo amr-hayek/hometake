@@ -27,14 +27,14 @@ resource "aws_security_group_rule" "from_alb" {
   description              = "Allow traffic from ALB"
 }
 
-# Get latest Amazon Linux 2023 AMI
-data "aws_ami" "al2023" {
+# Get latest Ubuntu 22.04 LTS AMI
+data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["137112412989"]
+  owners      = ["099720109477"] # Canonical
   
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
   
   filter {
@@ -77,7 +77,7 @@ locals {
 # Launch Template
 resource "aws_launch_template" "this" {
   name_prefix   = "${var.project}-lt-"
-  image_id      = data.aws_ami.al2023.id
+  image_id      = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
   
   vpc_security_group_ids = [aws_security_group.ec2.id]

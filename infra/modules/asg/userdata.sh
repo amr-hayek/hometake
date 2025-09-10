@@ -2,28 +2,42 @@
 set -euo pipefail
 
 # Update system
-yum update -y
+apt-get update -y
+apt-get upgrade -y
 
 # Install Docker
-amazon-linux-extras install -y docker
+apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io
 systemctl enable docker
 systemctl start docker
-usermod -a -G docker ec2-user
+usermod -a -G docker ubuntu
 
 # Install Docker Compose
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
-# Install SSM Agent (should be pre-installed on AL2023, but ensure it's running)
-yum install -y amazon-ssm-agent
-systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
+# Install SSM Agent (Ubuntu has better SSM support)
+snap install amazon-ssm-agent --classic
+
+# Enable and start SSM agent
+systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent.service
+systemctl start snap.amazon-ssm-agent.amazon-ssm-agent.service
+
+# Check SSM agent status
+systemctl status snap.amazon-ssm-agent.amazon-ssm-agent.service || true
+
+# Wait a moment for the agent to start
+sleep 10
 
 # Install CloudWatch Agent
-yum install -y amazon-cloudwatch-agent
+wget https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
+dpkg -i amazon-cloudwatch-agent.deb
 
 # Install jq for JSON processing
-yum install -y jq
+apt-get install -y jq
 
 # Create application directory
 mkdir -p /opt/app
@@ -108,11 +122,23 @@ EOF
 systemctl enable amazon-cloudwatch-agent
 systemctl start amazon-cloudwatch-agent
 
+# Test network connectivity to SSM endpoints
+echo "Testing network connectivity..."
+ping -c 3 ssm.us-east-1.amazonaws.com || echo "SSM endpoint ping failed"
+ping -c 3 ec2messages.us-east-1.amazonaws.com || echo "EC2 messages endpoint ping failed"
+ping -c 3 ssmmessages.us-east-1.amazonaws.com || echo "SSM messages endpoint ping failed"
+
 # Wait for SSM agent to register (this can take a few minutes)
 echo "Waiting for SSM agent to register..."
 for i in {1..30}; do
-  if systemctl is-active --quiet amazon-ssm-agent; then
+  if systemctl is-active --quiet snap.amazon-ssm-agent.amazon-ssm-agent.service; then
     echo "SSM agent is running"
+    # Check if agent is registered
+    if [ -f /var/lib/amazon/ssm/registration ]; then
+      echo "SSM agent registration file exists"
+    else
+      echo "SSM agent registration file not found"
+    fi
     break
   fi
   echo "Waiting for SSM agent... attempt $i/30"
