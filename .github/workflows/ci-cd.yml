@@ -121,17 +121,15 @@ jobs:
           
           echo "Found instances: $INSTANCE_IDS"
           
-          # Execute deployment on all instances using multiple commands
+          # Execute deployment on all instances
           echo "Deploying to instances..."
+          
+          # Create the commands JSON array
+          COMMANDS_JSON='["export AWS_DEFAULT_REGION=${{ env.AWS_REGION }}","cd /opt/app","jq \".image_tag = \\\"${{ env.IMAGE_TAG }}\\\"\" compose.vars.json > compose.vars.json.tmp && mv compose.vars.json.tmp compose.vars.json","/usr/local/bin/docker-compose-wrapper","echo \"Deployment completed successfully on\" $(hostname)"]'
+          
           aws ssm send-command \
             --document-name "AWS-RunShellScript" \
-            --parameters commands=[
-              "export AWS_DEFAULT_REGION=${{ env.AWS_REGION }}",
-              "cd /opt/app",
-              "jq '.image_tag = \"${{ env.IMAGE_TAG }}\"' compose.vars.json > compose.vars.json.tmp && mv compose.vars.json.tmp compose.vars.json",
-              "/usr/local/bin/docker-compose-wrapper",
-              "echo 'Deployment completed successfully on' \$(hostname)"
-            ] \
+            --parameters "commands=$COMMANDS_JSON" \
             --instance-ids $INSTANCE_IDS \
             --comment "Deploy $ECR_REPOSITORY:${{ env.IMAGE_TAG }}" \
             --output table
