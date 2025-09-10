@@ -1,0 +1,56 @@
+{
+  "agent": {
+    "metrics_collection_interval": 30,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/agent.log",
+    "run_as_user": "root"
+  },
+  "metrics": {
+    "namespace": "Takehome/EC2",
+    "append_dimensions": {
+      "AutoScalingGroupName": "${asg_name}",
+      "InstanceId": "${instance_id}"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "resources": ["*"],
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_system",
+          "cpu_usage_user"
+        ],
+        "totalcpu": true
+      },
+      "mem": {
+        "measurement": ["mem_used_percent"],
+        "metrics_collection_interval": 30
+      },
+      "disk": {
+        "resources": ["*"],
+        "measurement": ["used_percent"],
+        "ignore_file_system_types": ["sysfs", "devtmpfs", "overlay", "tmpfs"]
+      },
+      "netstat": {
+        "measurement": ["tcp_established", "tcp_time_wait"]
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/cloud-init-output.log",
+            "log_group_name": "/takehome/system",
+            "log_stream_name": "cloud-init-${instance_id}"
+          },
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "/takehome/system",
+            "log_stream_name": "messages-${instance_id}"
+          }
+        ]
+      }
+    }
+  }
+}

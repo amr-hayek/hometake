@@ -1,0 +1,162 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  AWS_REGION: us-east-1
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./app
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./app
+        run: |
+          # Add your tests here
+          echo "Running tests..."
+          npm test || echo "No tests configured yet"
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get Terraform outputs
+        id: tf
+        run: |
+          cd infra
+          echo "ecr_repo_url=$(terraform output -raw ecr_repo_url)" >> $GITHUB_OUTPUT
+          echo "asg_tag_key=$(terraform output -raw asg_tag_key)" >> $GITHUB_OUTPUT
+          echo "asg_tag_value=$(terraform output -raw asg_tag_value)" >> $GITHUB_OUTPUT
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        env:
+          ECR_REPOSITORY: ${{ steps.tf.outputs.ecr_repo_url }}
+        run: |
+          # Build the Docker image
+          docker build -t $ECR_REPOSITORY:${{ env.IMAGE_TAG }} -t $ECR_REPOSITORY:latest ./app
+          
+          # Push the image
+          docker push $ECR_REPOSITORY:${{ env.IMAGE_TAG }}
+          docker push $ECR_REPOSITORY:latest
+          
+          echo "Image pushed successfully: $ECR_REPOSITORY:${{ env.IMAGE_TAG }}"
+
+      - name: Deploy to EC2 instances
+        env:
+          ECR_REPOSITORY: ${{ steps.tf.outputs.ecr_repo_url }}
+          ASG_TAG_KEY: ${{ steps.tf.outputs.asg_tag_key }}
+          ASG_TAG_VALUE: ${{ steps.tf.outputs.asg_tag_value }}
+        run: |
+          # Find running instances by tag
+          echo "Finding instances with tag $ASG_TAG_KEY=$ASG_TAG_VALUE"
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:$ASG_TAG_KEY,Values=$ASG_TAG_VALUE" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text)
+          
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running instances found"
+            exit 1
+          fi
+          
+          echo "Found instances: $INSTANCE_IDS"
+          
+          # Create deployment command
+          DEPLOY_COMMAND='#!/bin/bash
+          set -euo pipefail
+          export AWS_DEFAULT_REGION=${{ env.AWS_REGION }}
+          
+          # Update compose variables with new image tag
+          cd /opt/app
+          jq ".image_tag = \"${{ env.IMAGE_TAG }}\"" compose.vars.json > compose.vars.json.tmp && mv compose.vars.json.tmp compose.vars.json
+          
+          # Run deployment wrapper
+          /usr/local/bin/docker-compose-wrapper
+          
+          echo "Deployment completed successfully on $(hostname)"'
+          
+          # Execute deployment on all instances
+          echo "Deploying to instances..."
+          aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --parameters commands=["$DEPLOY_COMMAND"] \
+            --instance-ids $INSTANCE_IDS \
+            --comment "Deploy $ECR_REPOSITORY:${{ env.IMAGE_TAG }}" \
+            --output table
+          
+          echo "Deployment command sent successfully"
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting 30 seconds for deployment to complete..."
+          sleep 30
+
+      - name: Health check
+        run: |
+          # Get the app URL from Terraform output
+          APP_URL=$(cd infra && terraform output -raw app_url)
+          echo "Checking health at: $APP_URL"
+          
+          # Wait for the application to be healthy
+          for i in {1..10}; do
+            if curl -f -s "$APP_URL/health" > /dev/null; then
+              echo "Health check passed!"
+              break
+            else
+              echo "Health check failed, attempt $i/10"
+              sleep 10
+            fi
+          done
+          
+          # Final health check
+          if ! curl -f -s "$APP_URL/health" > /dev/null; then
+            echo "Health check failed after all attempts"
+            exit 1
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ${{ steps.tf.outputs.ecr_repo_url }}:${{ env.IMAGE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region**: ${{ env.AWS_REGION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY

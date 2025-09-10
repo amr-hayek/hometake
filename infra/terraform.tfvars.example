@@ -1,0 +1,19 @@
+# Project configuration
+project = "takehome"
+region  = "us-east-1"
+
+# Domain configuration (your Route53 hosted zone)
+domain_name = "example.com"
+subdomain   = "app"
+
+# Auto Scaling Group configuration
+instance_type    = "t3.micro"
+desired_capacity = 2
+min_size         = 1
+max_size         = 5
+
+# Secrets Manager configuration
+secrets_manager_name = "takehome/app"
+
+# Optional: Email for CloudWatch alerts
+email_alerts = "your-email@example.com"
