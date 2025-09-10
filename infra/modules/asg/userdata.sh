@@ -52,7 +52,7 @@ version: '3.8'
 
 services:
   web:
-    image: ${ECR}:${TAG}
+    image: $${ECR}:$${TAG}
     container_name: hello-app
     ports:
       - "3000:3000"
@@ -65,9 +65,9 @@ services:
     logging:
       driver: awslogs
       options:
-        awslogs-region: ${REGION}
+        awslogs-region: $${REGION}
         awslogs-group: /takehome/app
-        awslogs-stream: web-${INSTANCE_ID}
+        awslogs-stream: web-$${INSTANCE_ID}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
@@ -77,7 +77,7 @@ services:
 YML
 
 # Login to ECR
-aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "${ECR%/*}"
+aws ecr get-login-password --region "$${REGION}" | docker login --username AWS --password-stdin "$${ECR%/*}"
 
 # Get secrets and create .env file
 aws secretsmanager get-secret-value --secret-id "${secrets_manager_name}" --query SecretString --output text > /opt/app/.env || echo "APP_SECRET=dev-secret" > /opt/app/.env

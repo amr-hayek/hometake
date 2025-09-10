@@ -45,7 +45,7 @@ data "aws_ami" "al2023" {
 
 # Template for docker-compose.yml
 data "template_file" "compose" {
-  template = file("${path.root}/../../deploy/docker-compose.yml.tftpl")
+  template = file("${path.module}/../../../deploy/docker-compose.yml.tftpl")
   vars = {
     ecr_repo_url = var.ecr_repo_url
     image_tag    = "latest"
@@ -56,7 +56,7 @@ data "template_file" "compose" {
 
 # Template for CloudWatch Agent config
 data "template_file" "cwagent" {
-  template = file("${path.root}/../../deploy/cwagent-config.json.tftpl")
+  template = file("${path.module}/../../../deploy/cwagent-config.json.tftpl")
   vars = {
     asg_name    = "${var.project}-asg"
     instance_id = "$${instance_id}"
