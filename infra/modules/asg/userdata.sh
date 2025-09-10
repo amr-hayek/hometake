@@ -14,6 +14,11 @@ usermod -a -G docker ec2-user
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
+# Install SSM Agent (should be pre-installed on AL2023, but ensure it's running)
+yum install -y amazon-ssm-agent
+systemctl enable amazon-ssm-agent
+systemctl start amazon-ssm-agent
+
 # Install CloudWatch Agent
 yum install -y amazon-cloudwatch-agent
 
@@ -102,6 +107,17 @@ EOF
 # Start CloudWatch Agent
 systemctl enable amazon-cloudwatch-agent
 systemctl start amazon-cloudwatch-agent
+
+# Wait for SSM agent to register (this can take a few minutes)
+echo "Waiting for SSM agent to register..."
+for i in {1..30}; do
+  if systemctl is-active --quiet amazon-ssm-agent; then
+    echo "SSM agent is running"
+    break
+  fi
+  echo "Waiting for SSM agent... attempt $i/30"
+  sleep 10
+done
 
 # Initial deployment
 /usr/local/bin/docker-compose-wrapper
