@@ -14,6 +14,12 @@ module "vpc" {
   tags    = local.tags
 }
 
+# VPC Endpoints for SSM already exist in the VPC
+# No need to create new ones - using existing endpoints:
+# - vpce-00a4dfa5b22086123 (com.amazonaws.us-east-1.ssm)
+# - vpce-05d056891e4c12364 (com.amazonaws.us-east-1.ssmmessages)  
+# - vpce-0d0ba9284f85b2b4b (com.amazonaws.us-east-1.ec2messages)
+
 # ECR Module
 module "ecr" {
   source = "./modules/ecr"

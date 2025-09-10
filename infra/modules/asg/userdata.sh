@@ -39,6 +39,13 @@ dpkg -i amazon-cloudwatch-agent.deb
 # Install jq for JSON processing
 apt-get install -y jq
 
+# Install AWS CLI v2
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+apt-get install -y unzip
+unzip awscliv2.zip
+./aws/install
+rm -rf aws awscliv2.zip
+
 # Create application directory
 mkdir -p /opt/app
 cd /opt/app
@@ -99,7 +106,8 @@ YML
 aws ecr get-login-password --region "$${REGION}" | docker login --username AWS --password-stdin "$${ECR%/*}"
 
 # Get secrets and create .env file
-aws secretsmanager get-secret-value --secret-id "${secrets_manager_name}" --query SecretString --output text > /opt/app/.env || echo "APP_SECRET=dev-secret" > /opt/app/.env
+SECRET_JSON=$(aws secretsmanager get-secret-value --secret-id "${secrets_manager_name}" --query SecretString --output text 2>/dev/null || echo '{"APP_SECRET":"dev-secret","NODE_ENV":"production"}')
+echo "$SECRET_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"' > /opt/app/.env
 
 # Deploy application
 docker-compose pull
@@ -113,9 +121,67 @@ EOF
 
 chmod +x /usr/local/bin/docker-compose-wrapper
 
-# Write CloudWatch Agent configuration
+# Get instance ID for CloudWatch configuration
+INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+
+# Write CloudWatch Agent configuration with actual instance ID
 cat > /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json <<EOF
-${cwagent_template}
+{
+  "agent": {
+    "metrics_collection_interval": 30,
+    "logfile": "/opt/aws/amazon-cloudwatch-agent/logs/agent.log",
+    "run_as_user": "root"
+  },
+  "metrics": {
+    "namespace": "Takehome/EC2",
+    "append_dimensions": {
+      "AutoScalingGroupName": "${asg_name}",
+      "InstanceId": "$INSTANCE_ID"
+    },
+    "metrics_collected": {
+      "cpu": {
+        "resources": ["*"],
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_iowait",
+          "cpu_usage_system",
+          "cpu_usage_user"
+        ],
+        "totalcpu": true
+      },
+      "mem": {
+        "measurement": ["mem_used_percent"],
+        "metrics_collection_interval": 30
+      },
+      "disk": {
+        "resources": ["*"],
+        "measurement": ["used_percent"],
+        "ignore_file_system_types": ["sysfs", "devtmpfs", "overlay", "tmpfs"]
+      },
+      "netstat": {
+        "measurement": ["tcp_established", "tcp_time_wait"]
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+          {
+            "file_path": "/var/log/cloud-init-output.log",
+            "log_group_name": "/takehome/system",
+            "log_stream_name": "cloud-init-$INSTANCE_ID"
+          },
+          {
+            "file_path": "/var/log/messages",
+            "log_group_name": "/takehome/system",
+            "log_stream_name": "messages-$INSTANCE_ID"
+          }
+        ]
+      }
+    }
+  }
+}
 EOF
 
 # Start CloudWatch Agent

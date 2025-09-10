@@ -55,13 +55,7 @@ data "template_file" "compose" {
 }
 
 # Template for CloudWatch Agent config
-data "template_file" "cwagent" {
-  template = file("${path.module}/../../../deploy/cwagent-config.json.tftpl")
-  vars = {
-    asg_name    = "${var.project}-asg"
-    instance_id = "$${instance_id}"
-  }
-}
+# CloudWatch agent configuration is now handled directly in userdata script
 
 # User data script
 locals {
@@ -70,7 +64,7 @@ locals {
     region              = var.region
     secrets_manager_name = var.secrets_manager_name
     compose_template    = data.template_file.compose.rendered
-    cwagent_template    = data.template_file.cwagent.rendered
+    asg_name            = "${var.project}-asg"
   }))
 }
 
