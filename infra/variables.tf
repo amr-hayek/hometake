@@ -48,7 +48,7 @@ variable "max_size" {
 variable "secrets_manager_name" {
   description = "Name of AWS Secrets Manager secret for app environment variables"
   type        = string
-  default     = "takehome/app"
+  default     = "takehome/app2"
 }
 
 variable "email_alerts" {

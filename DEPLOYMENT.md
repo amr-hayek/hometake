@@ -156,7 +156,7 @@ This guide provides detailed instructions for deploying the DevOps Takehome appl
    - Update with your environment variables:
    ```json
    {
-     "APP_SECRET": "your-production-secret",
+     "APP_SECRET": "Secret@411539",
      "NODE_ENV": "production",
      "DATABASE_URL": "your-database-url"
    }
@@ -164,7 +164,6 @@ This guide provides detailed instructions for deploying the DevOps Takehome appl
 
 2. **Redeploy Application**
    ```bash
-   git commit --allow-empty -m "Trigger redeploy for secrets"
    git push origin main
    ```
 
