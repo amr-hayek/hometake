@@ -143,8 +143,8 @@ jobs:
 
       - name: Health check
         run: |
-          # Get the app URL from Terraform output
-          APP_URL=$(cd infra && terraform output -raw app_url)
+          # Use hardcoded app URL (from terraform output)
+          APP_URL="https://thrive.alhaiek.com"
           echo "Checking health at: $APP_URL"
           
           # Wait for the application to be healthy
