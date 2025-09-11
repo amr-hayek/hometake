@@ -77,12 +77,11 @@
 
 ### 4. EC2 Instances
 - **Instance Type**: t3.micro (free tier eligible)
-- **AMI**: Amazon Linux 2023
+- **AMI**: Ubuntu
 - **Features**:
   - Docker and Docker Compose
   - CloudWatch Agent
   - SSM Agent for remote management
-  - IAM role for AWS service access
 
 ### 5. Docker Compose
 - **Purpose**: Container orchestration
@@ -130,23 +129,6 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Security Architecture
-
-### Network Security
-- **Security Groups**: Restrictive inbound/outbound rules
-- **VPC**: Isolated network environment
-- **HTTPS Only**: All traffic encrypted in transit
-
-### Access Control
-- **IAM Roles**: Least privilege access
-- **No SSH**: SSM Session Manager for access
-- **Secrets**: AWS Secrets Manager integration
-
-### Data Protection
-- **Encryption**: TLS 1.2 for data in transit
-- **Secrets**: Encrypted at rest in Secrets Manager
-- **Logs**: Encrypted in CloudWatch
-
 ## CI/CD Pipeline
 
 ```
@@ -170,43 +152,3 @@
 - **Auto Scaling**: CPU-based scaling
 - **Load Balancing**: Traffic distribution
 - **Multi-AZ**: High availability
-
-### Vertical Scaling
-- **Instance Types**: Easy to change
-- **Resource Monitoring**: CloudWatch metrics
-- **Performance Tuning**: Based on metrics
-
-## Cost Optimization
-
-### Resource Optimization
-- **t3.micro**: Free tier eligible
-- **Public Subnets**: No NAT Gateway costs
-- **Log Retention**: Configurable retention periods
-- **Auto Scaling**: Scale down during low usage
-
-### Monitoring Costs
-- **CloudWatch**: Pay for what you use
-- **ALB**: Pay per hour and per LCU
-- **ECR**: Pay per GB stored
-
-## Disaster Recovery
-
-### High Availability
-- **Multi-AZ**: Instances across availability zones
-- **Health Checks**: Automatic replacement of unhealthy instances
-- **Auto Scaling**: Maintains desired capacity
-
-### Backup Strategy
-- **Infrastructure**: Terraform state management
-- **Application**: Container images in ECR
-- **Configuration**: Version controlled in Git
-
-## Future Enhancements
-
-### Potential Improvements
-1. **Database**: Add RDS or DynamoDB
-2. **CDN**: CloudFront for static assets
-3. **Blue/Green**: Implement canary deployments
-4. **Microservices**: Split into multiple services
-5. **Service Mesh**: Istio for service communication
-6. **Observability**: Distributed tracing with X-Ray

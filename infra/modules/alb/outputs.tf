@@ -13,6 +13,11 @@ output "alb_arn" {
   value       = aws_lb.this.arn
 }
 
+output "alb_id" {
+  description = "ID of the load balancer (for CloudWatch metrics)"
+  value       = "app/${aws_lb.this.name}/${split("/", aws_lb.this.arn)[3]}"
+}
+
 output "alb_sg_id" {
   description = "Security group ID of the load balancer"
   value       = aws_security_group.alb.id

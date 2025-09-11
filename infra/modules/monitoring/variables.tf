@@ -3,8 +3,8 @@ variable "project" {
   type        = string
 }
 
-variable "alb_arn" {
-  description = "ARN of the Application Load Balancer"
+variable "alb_id" {
+  description = "ID of the Application Load Balancer (for CloudWatch metrics)"
   type        = string
 }
 

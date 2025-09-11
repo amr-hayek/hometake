@@ -84,7 +84,7 @@ module "monitoring" {
   source = "./modules/monitoring"
   
   project  = var.project
-  alb_arn  = module.alb.alb_arn
+  alb_id   = module.alb.alb_id
   tg_arn   = module.alb.tg_blue_arn
   asg_name = module.asg.asg_name
   email_alerts = var.email_alerts

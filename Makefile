@@ -1,10 +1,17 @@
-.PHONY: init plan apply destroy fmt lint help
+.PHONY: init plan apply destroy help
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo ' help            Show this help message'
+	@echo ' init            Initialize Terraform'
+	@echo ' plan            Plan Terraform changes'
+	@echo ' apply           Apply Terraform changes'
+	@echo ' destroy         Destroy all infrastructure'
+	@echo ' output          Show Terraform outputs'
+	@echo ' logs            Show application logs'
+	@echo ' status          Show deployment status'
 
 init: ## Initialize Terraform
 	cd infra && terraform init
@@ -18,11 +25,6 @@ apply: ## Apply Terraform changes
 destroy: ## Destroy all infrastructure
 	cd infra && terraform destroy -auto-approve
 
-fmt: ## Format Terraform files
-	terraform fmt -recursive
-
-lint: ## Lint Terraform files
-	cd infra && terraform validate
 
 output: ## Show Terraform outputs
 	cd infra && terraform output

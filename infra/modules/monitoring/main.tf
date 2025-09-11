@@ -46,7 +46,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         
         properties = {
           metrics = [
-            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_arn]
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", var.alb_id]
           ]
           view    = "timeSeries"
           stacked = false
@@ -64,7 +64,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         
         properties = {
           metrics = [
-            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_arn]
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_id]
           ]
           view    = "timeSeries"
           stacked = false
@@ -82,7 +82,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         
         properties = {
           metrics = [
-            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_arn],
+            ["AWS/ApplicationELB", "HTTPCode_Target_2XX_Count", "LoadBalancer", var.alb_id],
             [".", "HTTPCode_Target_4XX_Count", ".", "."],
             [".", "HTTPCode_Target_5XX_Count", ".", "."]
           ]
@@ -126,7 +126,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx_errors" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
   
   dimensions = {
-    LoadBalancer = var.alb_arn
+    LoadBalancer = var.alb_id
   }
   
   tags = var.tags
@@ -164,7 +164,7 @@ resource "aws_cloudwatch_metric_alarm" "target_response_time" {
   alarm_actions       = [aws_sns_topic.alerts.arn]
   
   dimensions = {
-    LoadBalancer = var.alb_arn
+    LoadBalancer = var.alb_id
   }
   
   tags = var.tags
