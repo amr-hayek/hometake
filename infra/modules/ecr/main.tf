@@ -1,6 +1,7 @@
 # ECR Repository
 resource "aws_ecr_repository" "repo" {
-  name = "${var.project}-web"
+  name         = "${var.project}-web"
+  force_delete = true
   
   image_scanning_configuration {
     scan_on_push = true
