@@ -25,7 +25,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:3000/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]

@@ -95,7 +95,7 @@ services:
         awslogs-group: /takehome/app
         awslogs-stream: web-$${INSTANCE_ID}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
