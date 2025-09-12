@@ -46,6 +46,7 @@ This guide provides detailed instructions for deploying the DevOps Takehome appl
    - Create a new account or sign in. Generate access keys to be used through awc-cli
 
 2. **Configure AWS CLI**
+   # Make sure to install awscli/make/curl packages.
    ```bash
    aws configure
    # Enter your Access Key ID, Secret Access Key, and region (us-east-1)
